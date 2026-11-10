@@ -1,16 +1,14 @@
 # Active Context
 
 ## Current Focus
-- Simplified customization model: following the "only one way to turn something off" principle.
-- Layout switching (`herdr-agy` vs default `main`) is the single source of truth for whether `agy-status` is active.
-- Removed redundant `Settings/Improvements` toggle and extra checks; kept Settings clean and native.
-- Ready to sync repository across machines.
+- Initialized GitHub MCP server using `@modelcontextprotocol/server-github` with personal access token.
+- Created new private GitHub repository `ACicmansky/herdr-config`.
+- Pushed current changes (layouts, mods, keys, themes, settings, .gitignore) to `https://github.com/ACicmansky/herdr-config`.
 
 ## Recent Changes
-- Removed redundant `improvements.antigravity_limits` toggle from Settings and `agy-status`.
-- Reverted `frame/settings/main.js` to clean native state and removed `mods/improvements`.
-- Verified `layouts/herdr-agy.json` is the sole declarative place where `agy-status` is used.
-- Git repository staged and ready.
+- Replaced misconfigured HTTP copilot MCP entry with standard stdio `@modelcontextprotocol/server-github`.
+- Created private repo `ACicmansky/herdr-config` via `gh`.
+- Pushed `main` branch to remote origin.
 
 ## Next Steps
-- Explain the single-switch model to user and how to use `layout.switch` / `Settings > Look` across machines.
+- User can clone/pull `ACicmansky/herdr-config` on work notebook.

@@ -1,11 +1,9 @@
 # Progress
 
 ## What Works
-- **Single Source of Truth**:
-  - `layouts/herdr-agy.json` uses `mods/agy-status` (Antigravity limits & reset countdowns).
-  - Default `main` uses native `workspace-status` (clean baseline without Antigravity queries).
-- **Clean Settings**: No redundant toggles in Settings; Settings remains 100% native.
-- **Git Repo Configured**: Clean staging tracking only user-owned mods, custom layouts, keys, and settings.
+- **GitHub MCP Server**: Configured and active via `agy mcp` (`@modelcontextprotocol/server-github` over stdio with authentication).
+- **Private Repository Created**: `https://github.com/ACicmansky/herdr-config` (private).
+- **Code Pushed**: All configurations, custom layouts (`herdr-agy.json`), user mods (`agy-status`), themes, keybindings, and `.gitignore` pushed to `main`.
 
 ## What's Left to Build
-- User connects git remote to sync with work notebook.
+- Ready for pulling on work notebook.
