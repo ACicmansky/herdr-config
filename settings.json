@@ -1,7 +1,9 @@
 {
   "zoom": 1,
   "sounds": {
-    "enabled": true
+    "enabled": true,
+    "done": "C:\\Users\\acicmansky001\\.config\\herdr-app\\sounds\\library\\ec34e5325f404a39b666695539c2c313--Napalm Death.mp3",
+    "blocked": "C:\\Users\\acicmansky001\\.config\\herdr-app\\sounds\\library\\ec34e5325f404a39b666695539c2c313--Napalm Death.mp3"
   },
   "font_ligatures": false,
   "minimum_contrast": 1

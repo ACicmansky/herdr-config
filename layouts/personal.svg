@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="200" viewBox="0 0 360 200">
+  <rect width="360" height="200" rx="8" fill="#17191c"/>
+  <rect x="1" y="1" width="78" height="198" rx="7" fill="#25272b"/>
+  <g fill="#747c88">
+    <rect x="12" y="16" width="50" height="5" rx="2"/>
+    <rect x="12" y="38" width="43" height="4" rx="2"/>
+    <rect x="12" y="54" width="50" height="4" rx="2"/>
+    <rect x="12" y="70" width="35" height="4" rx="2"/>
+    <rect x="12" y="175" width="44" height="4" rx="2"/>
+  </g>
+  <rect x="90" y="10" width="62" height="18" rx="5" fill="#343a45"/>
+  <rect x="90" y="38" width="260" height="151" rx="7" fill="#0d0f12" stroke="#424955"/>
+  <g fill="#a7b4c6">
+    <rect x="103" y="54" width="85" height="4" rx="2"/>
+    <rect x="103" y="66" width="135" height="4" rx="2"/>
+  </g>
+</svg>
