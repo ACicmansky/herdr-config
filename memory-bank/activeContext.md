@@ -1,17 +1,11 @@
 # Active Context
 
 ## Current Focus
-- Resolved sound mod integration from `updates.bundle` transferred from the work notebook:
-  1. Identified why it appeared unapplied:
-     - Herdr's active layout remained on `"main"` (Herdr does not auto-switch layouts when new layout files are added).
-     - `settings.json` contained hardcoded absolute paths pointing to work laptop user profile (`C:\Users\acicmansky001\...`), which did not exist on this machine (`Andrej`).
-  2. Fixed cross-machine portability:
-     - Converted sound paths in `settings.json` to portable relative paths (`sounds\library\...`).
-     - Enhanced `mods/sound-library/sounds.js` so `choose()` automatically normalizes local paths relative to `appHome()`, ensuring future sound selections sync seamlessly across both work and home laptops.
-  3. Integrated layout:
-     - Upgraded `layouts/herdr-agy.json` to feature `personal-chrome` (with sound library launcher and mute toggle button) while retaining `agy-status` (live Antigravity quota and reset countdowns).
-     - Switched Herdr's active layout to `herdr-agy`.
-  4. Verified all tests pass: `node mods\sound-library\test.cjs` passes with 0 errors; `herdr-app check` passes for all custom mods.
+- Fixed URI path resolution bug in [`LeafLauncher.cs`](file:///C:/Users/Andrej/.config/herdr-app/tools/leaf-launcher/LeafLauncher.cs):
+  - When clicking `file://wsl.localhost/Ubuntu/...` links from a WSL space, UNC path slashes (`//wsl.localhost/...`) prevented `ToLinuxPath` from matching the distro prefix, which resulted in passing `//wsl.localhost/Ubuntu/...` into Linux `leaf`. Linux `leaf` failed with `Error: Not a valid file, directory or keyword` and instantly closed the split pane.
+  - Stripped leading slashes in `ToLinuxPath` and generalized distro matching (`wsl.localhost/<distro>/...`).
+  - Tested clicking `file://wsl.localhost/Ubuntu/home/andrej/.gemini/antigravity-cli/brain/cf24165a-ed9a-4c88-8146-8b9ae756674a/wow_forever_sota_plan.md` in both WSL and Windows spaces; verified split pane renders in Herdr under 100ms.
+  - Committed `tools/leaf-launcher/` (`LeafLauncher.cs` and `setup-leaf.ps1`) to git for instant deployment across machines.
 
 ## Recent Changes
 - Configured `.md` files to open directly as an in-app split panel in Herdr running `leaf` (terminal markdown viewer) via [`LeafLauncher.exe`](file:///C:/Users/Andrej/bin/LeafLauncher.exe).

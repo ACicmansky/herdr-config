@@ -8,7 +8,8 @@
 - **Herdr Remote Automation**: `setup-ssh.ps1` and `Install-OpenSSH.bat` created to enable Windows OpenSSH Server and wire `hc` into system path for incoming mobile sessions.
 - **Clickable Terminal File Links**: Fixed and verified!
   - Installed `leaf` terminal markdown viewer in both Windows and WSL.
-  - Built `LeafLauncher.exe` to integrate directly with Herdr's window manager (`pane.split`).
+  - Built and committed [`tools/leaf-launcher`](file:///C:/Users/Andrej/.config/herdr-app/tools/leaf-launcher) (`LeafLauncher.cs` and automated installer `setup-leaf.ps1`).
+  - Fixed WSL UNC path conversion (`\\wsl.localhost\Ubuntu\...` -> `/home/...`).
   - Clicking any `.md` link in Herdr now splits a new panel to the right inside Herdr running `leaf` with the target file.
   - Exiting `leaf` (<kbd>q</kbd> or <kbd>Esc</kbd>) automatically closes the split panel.
   - Gracefully falls back to Windows Terminal if Herdr is not currently open.
