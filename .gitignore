@@ -54,3 +54,9 @@ mods/win98/
 mods/workspace-chrome/
 mods/workspace-status/
 mods/worktree/
+
+# Transfer bundles & caches
+*.bundle
+update-notes-cache.md
+*.png
+

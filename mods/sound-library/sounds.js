@@ -87,7 +87,13 @@ export default class SoundLibrary extends View {
   choose(cx, event, path) {
     this.perform(cx, () => this.update(sounds => {
       if (path === null) delete sounds[event];
-      else sounds[event] = path;
+      else {
+        const home = appHome().replace(/\//g, "\\").toLowerCase();
+        const norm = path.replace(/\//g, "\\");
+        sounds[event] = norm.toLowerCase().startsWith(home + "\\")
+          ? norm.slice(home.length + 1)
+          : path;
+      }
     }));
   }
 
