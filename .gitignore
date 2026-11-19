@@ -59,4 +59,5 @@ mods/worktree/
 *.bundle
 update-notes-cache.md
 *.png
+*.log
 
