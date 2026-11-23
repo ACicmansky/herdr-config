@@ -1,7 +1,12 @@
 # Active Context
 
 ## Current Focus
-- Fixed URI path resolution bug in [`LeafLauncher.cs`](file:///C:/Users/Andrej/.config/herdr-app/tools/leaf-launcher/LeafLauncher.cs):
+- Added a Windows per-app sound volume slider to the left of the mute/unmute speaker button in [`mods/personal-chrome/main.js`](file:///C:/Users/Andrej/.config/herdr-app/mods/personal-chrome/main.js):
+  - Uses `gpui-base` `Slider` / `SliderState` (`0..100`) in the `personal-chrome` footer (hidden when the sidebar is collapsed to the narrow rail). Always initializes `SliderState` in `init()` (with deferred `syncVolume` timers) so cold app restarts keep the slider visible even if `props()` / `window()` aren't populated yet during `init()`.
+  - Reads and writes `herdr-app.exe`'s Windows Volume Mixer (`ISimpleAudioVolume`) via [`mods/personal-chrome/volume.ps1`](file:///C:/Users/Andrej/.config/herdr-app/mods/personal-chrome/volume.ps1).
+  - Initializes an inactive Windows audio session silently on startup via [`sounds/silence.mp3`](file:///C:/Users/Andrej/.config/herdr-app/sounds/silence.mp3) when sounds are enabled and no session exists yet, preserving Windows' persisted mixer level.
+- Fixed [`setup-ssh.ps1`](file:///C:/Users/Andrej/.config/herdr-app/setup-ssh.ps1) to remove any stale `C:\Windows\System32\hc.exe` instead of copying `hc.exe` there, since `System32\hc.exe` shadowed `AppData\Local\Programs\herdr-core\hc.exe` on `PATH` and blocked `herdr-app` self-updates with `Access is denied (os error 5)`.
+- Previously fixed URI path resolution bug in [`LeafLauncher.cs`](file:///C:/Users/Andrej/.config/herdr-app/tools/leaf-launcher/LeafLauncher.cs):
   - When clicking `file://wsl.localhost/Ubuntu/...` links from a WSL space, UNC path slashes (`//wsl.localhost/...`) prevented `ToLinuxPath` from matching the distro prefix, which resulted in passing `//wsl.localhost/Ubuntu/...` into Linux `leaf`. Linux `leaf` failed with `Error: Not a valid file, directory or keyword` and instantly closed the split pane.
   - Stripped leading slashes in `ToLinuxPath` and generalized distro matching (`wsl.localhost/<distro>/...`).
   - Tested clicking `file://wsl.localhost/Ubuntu/home/andrej/.gemini/antigravity-cli/brain/cf24165a-ed9a-4c88-8146-8b9ae756674a/wow_forever_sota_plan.md` in both WSL and Windows spaces; verified split pane renders in Herdr under 100ms.

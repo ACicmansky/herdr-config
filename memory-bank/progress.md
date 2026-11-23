@@ -20,6 +20,7 @@
   - Imported and activated `mods/sound-library` and `mods/personal-chrome` from `updates.bundle`.
   - Normalized all sound paths to relative paths (`sounds\library\...`), enabling seamless git sharing across home and work notebooks.
   - Upgraded `layouts/herdr-agy.json` to include `personal-chrome` (with sound settings launcher and mute toggle button) alongside `agy-status` (live Antigravity quota counters).
+  - Added a volume slider to the left of the speaker mute/unmute button in `mods/personal-chrome/main.js`, backed by `mods/personal-chrome/volume.ps1` (Windows Core Audio `ISimpleAudioVolume` for `herdr-app.exe`) and `sounds/silence.mp3` for silent session initialization.
   - Verified <kbd>Ctrl</kbd>+<kbd>,</kbd> triggers the Sound Library overlay.
   - All unit checks (`node mods\sound-library\test.cjs`) and layout validation pass with 0 errors.
 

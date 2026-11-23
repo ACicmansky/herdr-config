@@ -110,6 +110,76 @@ async function main() {
   assert.equal(errors.length, 1);
   assert.equal(chrome.muting, false);
 
+  const sharedStore = {};
+  const sliderListeners = {};
+  let sliderValue = 100;
+  const played = [];
+  const volumeExecs = [];
+  let sessionCreated = false;
+  context.shared = k => sharedStore[k];
+  context.setShared = (k, v) => { sharedStore[k] = v; };
+  context.settings = () => ({ sounds: { enabled: true } });
+  context.playSound = s => { played.push(s); sessionCreated = true; };
+  context.props = () => ({ footer: true });
+  context.SliderState = {
+    new: opts => {
+      sliderValue = opts.value;
+      return {
+        value: () => sliderValue,
+        set_value: v => { sliderValue = v; },
+        on: (ev, fn) => { sliderListeners[ev] = fn; return true; }
+      };
+    }
+  };
+  context.exec = async (_bin, args) => {
+    const action = args[args.indexOf("-Action") + 1];
+    const levelIdx = args.indexOf("-Level");
+    const level = levelIdx >= 0 ? Number(args[levelIdx + 1]) : null;
+    volumeExecs.push({ action, level });
+    if (!sessionCreated) return { code: 0, stdout: JSON.stringify({ found: false, volume: null, muted: null }), stderr: "" };
+    return { code: 0, stdout: JSON.stringify({ found: true, volume: level ?? 64, muted: false }), stderr: "" };
+  };
+  const volumeTasks = [];
+  const vcx = {
+    notify() {},
+    timer: { after: (_ms, fn) => fn(vcx) },
+    spawn: action => { volumeTasks.push(action(vcx)); }
+  };
+  const footerChrome = new context.WorkspaceChrome();
+  footerChrome.init({}, vcx);
+  await Promise.all(volumeTasks);
+  assert.deepEqual(played, ["sounds/silence.mp3"]);
+  assert.equal(footerChrome.volume, 64);
+  assert.equal(sliderValue, 64);
+  assert.equal(sharedStore["sounds.volume"], 64);
+  sliderListeners.change(42, vcx);
+  assert.equal(footerChrome.volume, 42);
+  volumeTasks.length = 0;
+  sliderListeners.release(42, vcx);
+  await Promise.all(volumeTasks);
+  assert.equal(sharedStore["sounds.volume"], 42);
+  assert.deepEqual(volumeExecs.at(-1), { action: "set", level: 42 });
+
+  // Simulate cold start where props() is not populated during init() yet.
+  let coldProps = {};
+  const deferredTimers = [];
+  context.props = () => coldProps;
+  const coldChrome = new context.WorkspaceChrome();
+  const coldTasks = [];
+  const coldCx = {
+    notify() {},
+    timer: { after: (_ms, fn) => deferredTimers.push(fn) },
+    spawn: action => { coldTasks.push(action(coldCx)); }
+  };
+  coldChrome.init({}, coldCx);
+  assert.ok(coldChrome.volumeState);
+  assert.equal(coldChrome.syncedVolume, false);
+  coldProps = { footer: true };
+  for (const fn of deferredTimers) fn(coldCx);
+  await Promise.all(coldTasks);
+  assert.equal(coldChrome.syncedVolume, true);
+  assert.equal(coldChrome.volume, 64);
+
   const script = path.join(__dirname, "library.ps1");
   const args = ["-NoProfile", "-File", script];
   const items = JSON.parse(execFileSync("powershell.exe", args, { encoding: "utf8" }).replace(/^\uFEFF/, ""));

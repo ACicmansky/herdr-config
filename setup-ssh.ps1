@@ -15,9 +15,9 @@ if (-not (Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction Silentl
 }
 
 Write-Host "Ensuring hc is accessible system-wide..." -ForegroundColor Cyan
-$hcSrc = "C:\Users\Andrej\AppData\Local\Programs\herdr-core\hc.exe"
-if (Test-Path $hcSrc) {
-    Copy-Item -Path $hcSrc -Destination "C:\Windows\System32\hc.exe" -Force
+$staleSystemHc = "C:\Windows\System32\hc.exe"
+if (Test-Path $staleSystemHc) {
+    Remove-Item -Path $staleSystemHc -Force
 }
 $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
 $hcDir = "C:\Users\Andrej\AppData\Local\Programs\herdr-core"
