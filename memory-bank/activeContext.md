@@ -1,6 +1,12 @@
 # Active Context
 
 ## Current Focus
+- Added a Firstmate Worker Pane Indicator in [`mods/agy-status/`](file:///C:/Users/Andrej/.config/herdr-app/mods/agy-status/main.js):
+  - Extracted pure, unit-tested worker detection helpers in `mods/agy-status/worker.js` (`resolveActiveContext`, `detectWorkerContext`, `countActiveWorkers`) matching Firstmate's verified Herdr signals (`fm-*` / `*-fm-*` space and tab IDs, `fm/*` branches, `herdr.tab`/`herdr.space` labels, `firstmate-*` app names, and `.treehouse/` worktree paths) while keeping primary Firstmate sessions (`Firstmate` / `Captain quarters` / `antigravity`) and ordinary terminals unflagged.
+  - Updated `mods/agy-status/main.js` to show a prominent amber/warning `WORKER · reply in Firstmate` badge pill (with worker task tooltip) when the active pane/tab/space is a Firstmate worker, plus an active worker count summary (`· N worker(s)`) next to the agent count, while preserving all Antigravity quota bars, popup, refresh, and theme styling. Guarded `init()` startup refresh with `checking()` for clean `herdr-app check` runs.
+  - Kept the indicator cleanly in `mods/agy-status/` rather than editing shipped `tabs` or `pane` mods (which Herdr overwrites on startup).
+  - Added `mods/agy-status/test.cjs` covering primary Firstmate sessions, worker sessions, `.treehouse/` paths, label/title signals, worker counts, and `AgyStatus.render()` integration.
+- Added concise root `AGENTS.md` (documenting `memory-bank/` as canonical context, repo invariants, and local validation workflow; removed `AGENTS.md` from `.gitignore`) and `.agents/skills/herdr-mod-dev/SKILL.md` encoding mod structure, `gpui-kit`/`gpui-base`/`herdr` API discipline, verification checklist, and memory-bank update rules.
 - Added a Windows per-app sound volume slider to the left of the mute/unmute speaker button in [`mods/personal-chrome/main.js`](file:///C:/Users/Andrej/.config/herdr-app/mods/personal-chrome/main.js):
   - Uses `gpui-base` `Slider` / `SliderState` (`0..100`) in the `personal-chrome` footer (hidden when the sidebar is collapsed to the narrow rail). Always initializes `SliderState` in `init()` (with deferred `syncVolume` timers) so cold app restarts keep the slider visible even if `props()` / `window()` aren't populated yet during `init()`.
   - Reads and writes `herdr-app.exe`'s Windows Volume Mixer (`ISimpleAudioVolume`) via [`mods/personal-chrome/volume.ps1`](file:///C:/Users/Andrej/.config/herdr-app/mods/personal-chrome/volume.ps1).

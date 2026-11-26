@@ -1,7 +1,8 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { spaces, agents, theme, run, window, keys, exec, shared, setShared, openOverlay, props, appHome } from "herdr";
+import { spaces, agents, panes, terminals, focused, theme, run, window, keys, exec, shared, setShared, openOverlay, props, appHome, checking } from "herdr";
 import * as fs from "fs/promises";
+import { resolveActiveContext, detectWorkerContext, countActiveWorkers } from "./worker.js";
 
 function fmtCountdown(iso) {
   if (!iso) return "";
@@ -32,10 +33,17 @@ function pctColor(t, pct) {
   return t.foreground;
 }
 
+function withAlpha(color, alphaHex) {
+  if (typeof color === "string" && color.startsWith("#") && color.length >= 7) {
+    return color.slice(0, 7) + alphaHex;
+  }
+  return color;
+}
+
 export default class AgyStatus extends View {
   init(_p, cx) {
     this.loading = false;
-    if (props()?.popup) return;
+    if (props()?.popup || checking?.()) return;
     this.refresh(cx);
     cx.timer.every(120000, (cx) => this.refresh(cx));
     cx.timer.every(30000, (cx) => cx.notify());
@@ -131,8 +139,31 @@ export default class AgyStatus extends View {
   render(cx) {
     const t = theme();
     if (props()?.popup) return this.renderPopup(t, cx);
-    const space = spaces().find((s) => s.active);
+    const spaceList = spaces();
     const list = agents();
+    const paneList = panes();
+    const terminalList = terminals();
+    const currentFocus = focused();
+    const activeCtx = resolveActiveContext({
+      spaces: spaceList,
+      panes: paneList,
+      agents: list,
+      terminals: terminalList,
+      focused: currentFocus,
+    });
+    const space = activeCtx.space ?? spaceList.find((s) => s.active);
+    const workerState = detectWorkerContext(activeCtx);
+    const workerCount = countActiveWorkers({
+      spaces: spaceList,
+      panes: paneList,
+      agents: list,
+      terminals: terminalList,
+    });
+    const warnColor = t.working ?? t.ansi3 ?? "#e5c07b";
+    const workerTooltip = workerState.taskName
+      ? `Firstmate worker (${workerState.taskName}) — do not type chat replies here; reply in Firstmate`
+      : "Firstmate worker pane — do not type chat replies here; reply in Firstmate";
+
     const needs = list.filter((a) => a.status === "blocked").length;
     const label = (icon, text) => h_flex().gap(6).items_center().child(svg(`mods/workspace-chrome/${icon}.svg`).size(13)).child(text);
 
@@ -152,7 +183,17 @@ export default class AgyStatus extends View {
       .when(Boolean(space?.branch), (el) => el.child(label("branch", space.branch)))
       .child(
         h_flex().gap(6).items_center().child(div().size(6).rounded(3).bg(t.dim)).child(`${list.length} agents`)
+          .when(workerCount > 0, (el) => el.child(div().text_color(warnColor).child(`· ${workerCount} ${workerCount === 1 ? "worker" : "workers"}`)))
           .when(needs > 0, (el) => el.child(div().text_color(t.blocked).child(`· ${needs} needs you`)))
+      )
+      .when(workerState.isWorker, (el) =>
+        el.child(
+          h_flex().id("fm-worker-badge").h(20).px(8).gap(6).items_center().flex_none().rounded(5)
+            .bg(withAlpha(warnColor, "26")).border(1).border_color(warnColor)
+            .tooltip(workerTooltip)
+            .child(div().size(7).rounded(4).flex_none().bg(warnColor))
+            .child(div().font_semibold().text_size(11).text_color(warnColor).child("WORKER · reply in Firstmate"))
+        )
       )
       .child(div().flex_1())
       .child(

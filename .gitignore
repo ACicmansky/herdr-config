@@ -17,7 +17,6 @@ data/
 *.reset-*
 
 # Auto-generated type definitions and manual
-AGENTS.md
 gpui-kit.d.ts
 herdr.d.ts
 
