@@ -1,4 +1,4 @@
-# herdr-config
+# herdr-config (`AGENTS.local.md`)
 
 Windows/WSL configuration, custom layouts, themes, GPUI mods, sounds, and launch helpers for Herdr (`C:\Users\Andrej\.config\herdr-app`).
 
@@ -11,7 +11,7 @@ Windows/WSL configuration, custom layouts, themes, GPUI mods, sounds, and launch
 
 ## Architecture & Sync Notes
 - **Shipped vs. custom assets:** Shipped layouts (`main`, `terminals`, `win98`) and shipped mods (`spaces`, `agents`, `tabs`, `pane`, `files`, `changes`, `menu`, `toast`, etc.) are overwritten by `herdr-app.exe` on startup (edits are moved to `<name>-edited`). Always clone first (`herdr-app do layout.clone` / `herdr-app do mod.clone`) or keep custom UI in user-owned mods (`mods/agy-status/`, `mods/personal-chrome/`, `mods/sound-library/`).
-- **Live-folder `AGENTS.md` overwrite:** On startup, `herdr-app.exe` overwrites `C:\Users\Andrej\.config\herdr-app\AGENTS.md` with its built-in manual and leaves `AGENTS.local.md` untouched. Keep this repo's `AGENTS.md` in `herdr-config` as project guidance and use `AGENTS.local.md` for machine-local live-folder notes.
+- **Why `AGENTS.local.md` (and `AGENTS.md` in `.gitignore`):** On startup, `herdr-app.exe` overwrites `C:\Users\Andrej\.config\herdr-app\AGENTS.md` with its built-in manual and leaves `AGENTS.local.md` untouched while instructing agents to read it. Keep `AGENTS.md` ignored in `.gitignore` and store lasting project notes here.
 
 ## Verified Invariants
 - **`gpui-base` `SliderState` initialization:** Initialize `SliderState.new(...)` unconditionally inside `init()` before `props()` or `window()` may be populated on cold app restarts, and pair with deferred `cx.timer.after` sync timers (see `mods/personal-chrome/main.js`).
@@ -24,6 +24,6 @@ Windows/WSL configuration, custom layouts, themes, GPUI mods, sounds, and launch
 ## Local Validation Before Syncing to `C:\Users\Andrej\.config\herdr-app`
 1. Syntax-check modified JS: `node --check mods/<name>/main.js` (and helper modules).
 2. Run mod unit tests: `node mods/agy-status/test.cjs` and `node mods/sound-library/test.cjs` (note: PowerShell sections in `sound-library/test.cjs` require Windows `powershell.exe`).
-3. Validate mods in Herdr (from WSL, UNC paths work):
-   `"/mnt/c/Users/Andrej/AppData/Local/Programs/herdr-app/herdr-app.exe" check "\\wsl.localhost\Ubuntu\<worktree>\mods\<name>"`
+3. Validate mods in Herdr (from WSL, single-quoted UNC paths work):
+   `/mnt/c/Users/Andrej/AppData/Local/Programs/herdr-app/herdr-app.exe check '\\wsl.localhost\Ubuntu\<worktree>\mods\<name>'`
 4. After syncing to `C:\Users\Andrej\.config\herdr-app`, verify no `*.error` files (`layout.error`, `keys.error`, `settings.error`, `programs.error`) appear and `herdr-app status` reports no mod errors.

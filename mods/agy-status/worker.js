@@ -1,9 +1,10 @@
 const MACHINE_PREFIX_RE = /^([^/\\\s]+)\/(.+)$/;
 const TREEHOUSE_PATH_RE = /(?:^|[\\/])\.treehouse(?:[\\/]|$)/i;
-const WORKER_BRANCH_RE = /^fm[/-]/i;
+const WORKER_BRANCH_RE = /^fm\//i;
 const WORKER_ID_RE = /^(?:fm-|[a-z0-9][a-z0-9_-]*-fm-)/i;
-const WORKER_TITLE_RE = /^(?:\[\s*[.!]\s*\]\s*|[^\p{L}\p{N}/]+\s*)?fm[/-]/iu;
-const WORKER_APP_RE = /^firstmate[-_]/i;
+const STATUS_PREFIX_RE = /^(?:\[\s*[.!]\s*\]\s*|[✋⏳]\uFE0F?\s+|(?!(?:\p{Emoji}\uFE0F|[#*]\u20E3))[^\p{L}\p{N}\p{Ps}\p{Pi}\p{Emoji_Presentation}/\\.]+\s*)*/u;
+const WORKER_TITLE_PREFIX_RE = /^fm[/-]/i;
+const WORKER_APP_RE = /^firstmate-/i;
 
 /**
  * Strip an optional `<machine>/` prefix from a Herdr space/tab/terminal ID.
@@ -15,6 +16,10 @@ export function stripMachinePrefix(value) {
   if (!trimmed || /^[\\/]/.test(trimmed) || /^[a-zA-Z]:[\\/]/.test(trimmed)) return trimmed;
   const match = MACHINE_PREFIX_RE.exec(trimmed);
   return match ? match[2] : trimmed;
+}
+
+export function stripStatusPrefix(text) {
+  return typeof text === "string" ? text.trim().replace(STATUS_PREFIX_RE, "") : "";
 }
 
 export function isTreehousePath(value) {
@@ -31,7 +36,8 @@ export function isWorkerId(id) {
 }
 
 export function isWorkerTitleOrName(text) {
-  return typeof text === "string" && WORKER_TITLE_RE.test(text.trim());
+  const cleaned = stripStatusPrefix(text);
+  return Boolean(cleaned) && WORKER_TITLE_PREFIX_RE.test(cleaned);
 }
 
 export function isWorkerApp(app) {
@@ -40,33 +46,32 @@ export function isWorkerApp(app) {
 
 function isWorkerLabels(labels) {
   if (!labels || typeof labels !== "object") return false;
-  if (isWorkerId(labels["herdr.tab"]) || isWorkerId(labels["herdr.space"])) return true;
-  for (const [key, rawVal] of Object.entries(labels)) {
-    const k = String(key).toLowerCase();
-    const v = rawVal == null ? "" : String(rawVal).trim();
-    if (!v) continue;
-    if ((k === "fm.role" || k === "firstmate.role") && /^worker$/i.test(v)) return true;
-    if ((k === "fm.worker" || k === "firstmate.worker" || k === "fm.task") && !/^(?:0|false|no)$/i.test(v)) return true;
-    if (isWorkerId(v) || isTreehousePath(v)) return true;
-  }
-  return false;
+  return isWorkerId(labels["herdr.tab"]) || isWorkerId(labels["herdr.space"]);
 }
 
-export function extractWorkerTaskName({ branch, tabId, herdrTabLabel, title, name } = {}) {
-  if (isWorkerBranch(branch)) {
-    return branch.trim().replace(/^fm[/-]/i, "");
+export function extractWorkerTaskName({ branches = [], tabIds = [], names = [], titles = [] } = {}) {
+  for (const branch of branches) {
+    if (!isWorkerBranch(branch)) continue;
+    const task = branch.trim().replace(WORKER_BRANCH_RE, "").trim();
+    if (task) return task;
   }
-  for (const candidate of [herdrTabLabel, tabId]) {
+  for (const candidate of tabIds) {
     const bare = stripMachinePrefix(candidate);
     if (!bare) continue;
-    if (/^fm-/i.test(bare)) return bare.slice(3);
+    if (/^fm-/i.test(bare)) {
+      const task = bare.slice(3).trim();
+      if (task) return task;
+    }
     const marker = bare.toLowerCase().indexOf("-fm-");
-    if (marker >= 0) return bare.slice(marker + 4);
+    if (marker >= 0) {
+      const task = bare.slice(marker + 4).trim();
+      if (task) return task;
+    }
   }
-  for (const text of [name, title]) {
+  for (const text of [...names, ...titles]) {
     if (!isWorkerTitleOrName(text)) continue;
-    const cleaned = text.trim().replace(/^(?:\[\s*[.!]\s*\]\s*|[^\p{L}\p{N}/]+\s*)?/u, "");
-    return cleaned.replace(/^fm[/-]/i, "");
+    const task = stripStatusPrefix(text).replace(WORKER_TITLE_PREFIX_RE, "").trim();
+    if (task) return task;
   }
   return null;
 }
@@ -90,7 +95,6 @@ export function detectWorkerContext(ctx = {}) {
   }
 
   if (isWorkerBranch(pane?.branch)) reasons.push("pane.branch");
-  if (isWorkerBranch(space?.branch)) reasons.push("space.branch");
 
   if (isWorkerLabels(terminal?.labels)) reasons.push("terminal.labels");
 
@@ -124,11 +128,10 @@ export function detectWorkerContext(ctx = {}) {
 
   const taskName = reasons.length > 0
     ? extractWorkerTaskName({
-        branch: pane?.branch || space?.branch,
-        tabId: tab?.id || pane?.tab || agent?.tab,
-        herdrTabLabel: terminal?.labels?.["herdr.tab"],
-        name: pane?.name || agent?.pane_name || terminal?.name || tab?.name,
-        title: pane?.title || agent?.title || terminal?.title,
+        branches: [pane?.branch],
+        tabIds: [terminal?.labels?.["herdr.tab"], tab?.id, pane?.tab, agent?.tab],
+        names: [pane?.name, agent?.pane_name, terminal?.name, tab?.name],
+        titles: [pane?.title, agent?.title, terminal?.title],
       })
     : null;
 
@@ -143,6 +146,15 @@ export function detectWorkerContext(ctx = {}) {
  * Resolve the currently focused space, tab, pane, agent, and terminal from Herdr live state.
  */
 export function resolveActiveContext({ spaces = [], panes = [], agents = [], terminals = [], focused = null } = {}) {
+  const isStandalone = Boolean(focused && !focused.pane && (focused.terminal || focused.agent));
+  const isShownReplacement = Boolean(focused?.shown && focused.shown !== focused.terminal);
+  if (isStandalone || isShownReplacement) {
+    const addr = focused?.shown || focused?.terminal || focused?.agent || null;
+    const terminal = addr ? (terminals.find((t) => t.address === addr) ?? null) : null;
+    const agent = addr ? (agents.find((a) => a.address === addr) ?? null) : null;
+    return { space: null, tab: null, pane: null, agent, terminal, focused };
+  }
+
   const space = (focused?.space ? spaces.find((s) => s.id === focused.space) : null)
     ?? spaces.find((s) => s.active)
     ?? null;
@@ -150,75 +162,19 @@ export function resolveActiveContext({ spaces = [], panes = [], agents = [], ter
   const tab = (focused?.tab ? spaceTabs.find((t) => t.id === focused.tab) : null)
     ?? spaceTabs.find((t) => t.active)
     ?? null;
-  const pane = (focused?.pane ? panes.find((p) => p.pane === focused.pane) : null)
-    ?? panes.find((p) => p.focused)
-    ?? (tab ? panes.find((p) => p.tab === tab.id) : null)
-    ?? null;
-  const addr = focused?.shown ?? focused?.terminal ?? focused?.agent ?? pane?.terminal ?? null;
+  const pane = focused?.pane
+    ? (panes.find((p) => p.pane === focused.pane) ?? null)
+    : (tab ? (panes.find((p) => p.tab === tab.id && p.focused) ?? panes.find((p) => p.tab === tab.id)) : null) ?? null;
+  const addr = focused?.terminal ?? pane?.terminal ?? focused?.agent ?? null;
   const terminal = addr ? (terminals.find((t) => t.address === addr) ?? null) : null;
-  const agent = (addr ? agents.find((a) => a.address === addr) : null)
-    ?? (pane ? agents.find((a) => a.pane === pane.pane) : null)
-    ?? agents.find((a) => a.focused)
-    ?? null;
+  let agent = null;
+  if (addr) {
+    agent = agents.find((a) => a.address === addr) ?? null;
+  } else if (pane) {
+    agent = agents.find((a) => a.pane === pane.pane) ?? null;
+  } else {
+    agent = agents.find((a) => a.focused) ?? null;
+  }
 
   return { space, tab, pane, agent, terminal, focused };
-}
-
-/**
- * Count unique active Firstmate worker sessions across agents and terminal panes.
- */
-export function countActiveWorkers({ spaces = [], panes = [], agents = [], terminals = [] } = {}) {
-  const spaceById = new Map(spaces.map((s) => [s.id, s]));
-  const tabInfoById = new Map();
-  for (const s of spaces) {
-    for (const t of s.tabs ?? []) {
-      tabInfoById.set(t.id, { tab: t, space: s });
-    }
-  }
-  const paneById = new Map(panes.map((p) => [p.pane, p]));
-  const terminalByAddr = new Map(terminals.map((t) => [t.address, t]));
-
-  const seenAddrs = new Set();
-  const seenAgentTabs = new Set();
-  let count = 0;
-
-  for (const agent of agents) {
-    const tabInfo = tabInfoById.get(agent.tab);
-    const space = spaceById.get(agent.space) ?? tabInfo?.space ?? null;
-    const pane = paneById.get(agent.pane) ?? null;
-    const terminal = terminalByAddr.get(agent.address) ?? null;
-    const result = detectWorkerContext({
-      space,
-      tab: tabInfo?.tab ?? null,
-      pane,
-      agent,
-      terminal,
-    });
-    if (!result.isWorker) continue;
-    const key = agent.address || agent.pane;
-    if (seenAddrs.has(key)) continue;
-    seenAddrs.add(key);
-    if (agent.tab) seenAgentTabs.add(agent.tab);
-    count++;
-  }
-
-  for (const pane of panes) {
-    if (!pane.terminal) continue;
-    if (seenAddrs.has(pane.terminal)) continue;
-    if (pane.tab && seenAgentTabs.has(pane.tab)) continue;
-    const tabInfo = tabInfoById.get(pane.tab);
-    const terminal = terminalByAddr.get(pane.terminal) ?? null;
-    const result = detectWorkerContext({
-      space: tabInfo?.space ?? null,
-      tab: tabInfo?.tab ?? null,
-      pane,
-      terminal,
-    });
-    if (!result.isWorker) continue;
-    seenAddrs.add(pane.terminal);
-    if (pane.tab) seenAgentTabs.add(pane.tab);
-    count++;
-  }
-
-  return count;
 }

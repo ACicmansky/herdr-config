@@ -2,7 +2,7 @@ import { View, div, svg, image } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { spaces, agents, panes, terminals, focused, theme, run, window, keys, exec, shared, setShared, openOverlay, props, appHome, checking } from "herdr";
 import * as fs from "fs/promises";
-import { resolveActiveContext, detectWorkerContext, countActiveWorkers } from "./worker.js";
+import { resolveActiveContext, detectWorkerContext } from "./worker.js";
 
 function fmtCountdown(iso) {
   if (!iso) return "";
@@ -153,12 +153,6 @@ export default class AgyStatus extends View {
     });
     const space = activeCtx.space ?? spaceList.find((s) => s.active);
     const workerState = detectWorkerContext(activeCtx);
-    const workerCount = countActiveWorkers({
-      spaces: spaceList,
-      panes: paneList,
-      agents: list,
-      terminals: terminalList,
-    });
     const warnColor = t.working ?? t.ansi3 ?? "#e5c07b";
     const workerTooltip = workerState.taskName
       ? `Firstmate worker (${workerState.taskName}) — do not type chat replies here; reply in Firstmate`
@@ -183,7 +177,6 @@ export default class AgyStatus extends View {
       .when(Boolean(space?.branch), (el) => el.child(label("branch", space.branch)))
       .child(
         h_flex().gap(6).items_center().child(div().size(6).rounded(3).bg(t.dim)).child(`${list.length} agents`)
-          .when(workerCount > 0, (el) => el.child(div().text_color(warnColor).child(`· ${workerCount} ${workerCount === 1 ? "worker" : "workers"}`)))
           .when(needs > 0, (el) => el.child(div().text_color(t.blocked).child(`· ${needs} needs you`)))
       )
       .when(workerState.isWorker, (el) =>

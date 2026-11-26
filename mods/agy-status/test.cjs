@@ -108,14 +108,23 @@ async function main() {
   assert.equal(primaryRes.isWorker, false);
   assert.deepEqual(primaryRes.reasons, []);
 
-  // 2. Ordinary terminal in a normal repo must NOT be flagged as a worker.
+  // 2. Ordinary terminal in a normal repo must NOT be flagged as a worker,
+  //    including when space.branch is fm/* (Tab 1) while Tab 2 is on main,
+  //    or when unrelated labels / Windows paths / bracketed titles are present.
   const ordinaryRes = worker.detectWorkerContext({
-    space: { id: "spb39fa5e5a359c4149ca730b5a27d8acb", name: "herdr-app", folder: "C:\\Users\\Andrej\\.config\\herdr-app", branch: "main", active: true },
+    space: { id: "spb39fa5e5a359c4149ca730b5a27d8acb", name: "herdr-app", folder: "C:\\Users\\Andrej\\.config\\herdr-app", branch: "fm/herdr-worker-badge-and-docs", active: true },
     tab: { id: "tb0cf18c29a0932be398411778be6dc75d", name: "1", active: true },
     pane: { pane: "p1", terminal: "t7", tab: "tb0cf18c29a0932be398411778be6dc75d", title: "pwsh", name: null, cwd: "C:\\Users\\Andrej\\.config\\herdr-app", branch: "main", app: null, focused: true },
+    terminal: { address: "t7", labels: { repo: "acme/fm-radio", project: "last-fm-api" } },
     focused: { space: "spb39fa5e5a359c4149ca730b5a27d8acb", tab: "tb0cf18c29a0932be398411778be6dc75d", pane: "p1", terminal: "t7", cwd: "C:\\Users\\Andrej\\.config\\herdr-app" },
   });
   assert.equal(ordinaryRes.isWorker, false);
+
+  for (const nonWorkerTitle of [".\\fm-project", "..\\fm-project", "\\fm-project", "/fm-project", "[fm-config]", "(fm/docs)"]) {
+    assert.equal(worker.isWorkerTitleOrName(nonWorkerTitle), false, `Expected ${nonWorkerTitle} not to match worker title`);
+  }
+  assert.equal(worker.isWorkerBranch("fm-radio"), false);
+  assert.equal(worker.isWorkerApp("firstmate_custom"), false);
 
   // 3. Firstmate worker via space/tab fm-* IDs, fm/* branch, and .treehouse/ path.
   const workerSpace = {
@@ -165,12 +174,21 @@ async function main() {
   assert.equal(treehouseOnly.isWorker, true);
   assert.deepEqual(treehouseOnly.reasons, ["pane.cwd"]);
 
-  // 5. Detection via fm-* title/name with status glyph prefix or herdr.tab label.
+  // 5. Detection via fm-* title/name with status glyph prefix or herdr.tab label,
+  //    and non-shadowing taskName extraction when earlier candidates are generic/bare.
   const titleWorker = worker.detectWorkerContext({
-    pane: { pane: "p10", terminal: "t10", title: "✦ fm-fix-tests", cwd: "/tmp" },
+    pane: { pane: "p10", terminal: "t10", title: "✦ Working", cwd: "/tmp" },
+    terminal: { address: "t10", name: "t10", title: "✦ fm-fix-tests" },
+    tab: { id: "tb10", name: "fm-tab-task" },
   });
   assert.equal(titleWorker.isWorker, true);
-  assert.equal(titleWorker.taskName, "fix-tests");
+  assert.equal(titleWorker.taskName, "tab-task");
+
+  const barePrefixFallback = worker.detectWorkerContext({
+    pane: { pane: "p10b", branch: "fm/", title: "fm-" },
+    tab: { id: "tb10b", name: "fm-real-task" },
+  });
+  assert.equal(barePrefixFallback.taskName, "real-task");
 
   const labelWorker = worker.detectWorkerContext({
     terminal: { address: "t11", labels: { "herdr.tab": "fm-audit-logs" } },
@@ -178,23 +196,43 @@ async function main() {
   assert.equal(labelWorker.isWorker, true);
   assert.equal(labelWorker.taskName, "audit-logs");
 
-  // 6. Active worker count deduplicates agent + split non-agent pane in same worker tab.
-  const workerCount = worker.countActiveWorkers({
-    spaces: [primarySpace, workerSpace],
-    panes: [
-      primaryPane,
-      workerPane,
-      { pane: "wsl/pleaf", terminal: "wsl/tleaf", tab: workerPane.tab, title: "leaf", cwd: workerPane.cwd },
-      { pane: "wsl/pother", terminal: "wsl/t4f", tab: workerSpace.tabs[1].id, title: "Worker 2", cwd: "/home/andrej/.treehouse/wow/2/wow", app: "firstmate-agy" },
-    ],
-    agents: [
-      primaryAgent,
-      { address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, status: "working", app: "firstmate-agy" },
-      { address: "wsl/t4f", pane: "wsl/pother", space: workerSpace.id, tab: workerSpace.tabs[1].id, status: "working", app: "firstmate-agy" },
-    ],
-    terminals: [],
+  // 6. Focus resolution: standalone peek / shown replacement / non-agent pane must not cross-contaminate.
+  const peekNonWorker = worker.resolveActiveContext({
+    spaces: [workerSpace],
+    panes: [workerPane],
+    agents: [{ address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, app: "firstmate-agy", focused: true }],
+    terminals: [{ address: "wsl/t-plain", cwd: "/tmp", labels: {} }],
+    focused: { space: workerSpace.id, tab: workerPane.tab, pane: null, terminal: "wsl/t-plain", shown: null, agent: null, cwd: "/tmp" },
   });
-  assert.equal(workerCount, 2);
+  assert.equal(worker.detectWorkerContext(peekNonWorker).isWorker, false);
+
+  const peekWorker = worker.resolveActiveContext({
+    spaces: [primarySpace],
+    panes: [primaryPane],
+    agents: [primaryAgent, { address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, app: "firstmate-agy", focused: false }],
+    terminals: [{ address: "wsl/t4g", cwd: workerPane.cwd, labels: { "herdr.tab": "firstmate-b123951d-fm-peeked" } }],
+    focused: { space: primarySpace.id, tab: primaryPane.tab, pane: null, terminal: "wsl/t4g", shown: null, agent: "wsl/t4g", cwd: workerPane.cwd },
+  });
+  assert.equal(worker.detectWorkerContext(peekWorker).isWorker, true);
+  assert.equal(worker.detectWorkerContext(peekWorker).taskName, "peeked");
+
+  const shownPlainOnWorkerPane = worker.resolveActiveContext({
+    spaces: [workerSpace],
+    panes: [workerPane],
+    agents: [{ address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, app: "firstmate-agy", focused: true }],
+    terminals: [{ address: "wsl/t-shown", cwd: "/tmp", labels: {} }],
+    focused: { space: workerSpace.id, tab: workerPane.tab, pane: workerPane.pane, terminal: "wsl/t4g", shown: "wsl/t-shown", agent: null, cwd: "/tmp" },
+  });
+  assert.equal(worker.detectWorkerContext(shownPlainOnWorkerPane).isWorker, false);
+
+  const modPaneWithFocusedAgentElsewhere = worker.resolveActiveContext({
+    spaces: [primarySpace],
+    panes: [{ pane: "p-mod", terminal: null, mod: "files", tab: primaryPane.tab, title: "Files", focused: true }],
+    agents: [{ address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, app: "firstmate-agy", focused: true }],
+    terminals: [],
+    focused: { space: primarySpace.id, tab: primaryPane.tab, pane: "p-mod", terminal: null, shown: null, agent: null, cwd: null },
+  });
+  assert.equal(worker.detectWorkerContext(modPaneWithFocusedAgentElsewhere).isWorker, false);
 
   // 7. Integration test of AgyStatus render() via vm (matching sound-library/test.cjs style).
   let mockSpaces = [primarySpace, workerSpace];
@@ -261,11 +299,10 @@ async function main() {
   const statusBar = new context.AgyStatus();
   statusBar.loading = false;
 
-  // Primary Firstmate focused: worker badge must NOT render, but worker summary and AGY quota must render.
+  // Primary Firstmate focused: worker badge must NOT render, while AGY quota must render.
   const primaryTree = collectNodes(statusBar.render({}));
   assert.equal(primaryTree.some((n) => n.elementId === "fm-worker-badge"), false);
   assert.ok(primaryTree.some((n) => n.elementId === "agy-limits"));
-  assert.ok(primaryTree.some((n) => (n.text ?? []).includes("· 1 worker")));
   assert.ok(primaryTree.some((n) => (n.text ?? []).includes("85%")));
 
   // Switch focus to worker pane: badge MUST render prominently.

@@ -25,8 +25,8 @@
   - All unit checks (`node mods\sound-library\test.cjs`) and layout validation pass with 0 errors.
 
 - **Firstmate Worker Pane Indicator & Agent Docs**:
-  - Added `mods/agy-status/worker.js` and `mods/agy-status/test.cjs`, and updated `mods/agy-status/main.js` with a high-contrast `WORKER · reply in Firstmate` badge pill and active worker count summary while preserving all quota/popup functionality.
-  - Added concise root `AGENTS.md` (unignored in `.gitignore`) and `.agents/skills/herdr-mod-dev/SKILL.md` documenting Herdr mod architecture, verified repo invariants, and validation steps.
+  - Added `mods/agy-status/worker.js` and `mods/agy-status/test.cjs`, and updated `mods/agy-status/main.js` with a high-contrast `WORKER · reply in Firstmate` badge pill while preserving all quota/popup functionality.
+  - Added concise `AGENTS.local.md` (keeping `AGENTS.md` ignored in `.gitignore`) and `.agents/skills/herdr-mod-dev/SKILL.md` documenting Herdr mod architecture, verified repo invariants, and validation steps.
   - Verified with `node --check`, `node mods/agy-status/test.cjs`, and `herdr-app.exe check` on `mods/agy-status`.
 
 ## What's Left to Build
