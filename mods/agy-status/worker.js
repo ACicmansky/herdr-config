@@ -2,7 +2,7 @@ const MACHINE_PREFIX_RE = /^([^/\\\s]+)\/(.+)$/;
 const TREEHOUSE_PATH_RE = /(?:^|[\\/])\.treehouse(?:[\\/]|$)/i;
 const WORKER_BRANCH_RE = /^fm\//i;
 const WORKER_ID_RE = /^(?:fm-|[a-z0-9][a-z0-9_-]*-fm-)/i;
-const STATUS_PREFIX_RE = /^(?:\[\s*[.!]\s*\]\s*|[✋⏳]\uFE0F?\s+|(?!(?:\p{Emoji}\uFE0F|[#*]\u20E3))[^\p{L}\p{N}\p{Ps}\p{Pi}\p{Emoji_Presentation}/\\.]+\s*)*/u;
+const STATUS_PREFIX_RE = /^(?:\[\s*[.!]\s*\]\s*|[✋⏳]\uFE0F?\s+|(?!(?:\p{Emoji}\uFE0F|[#*]\u20E3))[^\p{L}\p{N}\p{Ps}\p{Pi}\p{Emoji_Presentation}/\\."'~`])*/u;
 const WORKER_TITLE_PREFIX_RE = /^fm[/-]/i;
 const WORKER_APP_RE = /^firstmate-/i;
 
@@ -56,14 +56,14 @@ export function extractWorkerTaskName({ branches = [], tabIds = [], names = [], 
     if (task) return task;
   }
   for (const candidate of tabIds) {
+    if (!isWorkerId(candidate)) continue;
     const bare = stripMachinePrefix(candidate);
-    if (!bare) continue;
     if (/^fm-/i.test(bare)) {
       const task = bare.slice(3).trim();
       if (task) return task;
     }
     const marker = bare.toLowerCase().indexOf("-fm-");
-    if (marker >= 0) {
+    if (marker > 0) {
       const task = bare.slice(marker + 4).trim();
       if (task) return task;
     }
@@ -155,25 +155,25 @@ export function resolveActiveContext({ spaces = [], panes = [], agents = [], ter
     return { space: null, tab: null, pane: null, agent, terminal, focused };
   }
 
-  const space = (focused?.space ? spaces.find((s) => s.id === focused.space) : null)
-    ?? spaces.find((s) => s.active)
-    ?? null;
+  const space = focused?.space
+    ? (spaces.find((s) => s.id === focused.space) ?? null)
+    : (spaces.find((s) => s.active) ?? null);
   const spaceTabs = space?.tabs ?? [];
-  const tab = (focused?.tab ? spaceTabs.find((t) => t.id === focused.tab) : null)
-    ?? spaceTabs.find((t) => t.active)
-    ?? null;
-  const pane = focused?.pane
-    ? (panes.find((p) => p.pane === focused.pane) ?? null)
-    : (tab ? (panes.find((p) => p.tab === tab.id && p.focused) ?? panes.find((p) => p.tab === tab.id)) : null) ?? null;
-  const addr = focused?.terminal ?? pane?.terminal ?? focused?.agent ?? null;
+  const tab = focused?.tab
+    ? (spaceTabs.find((t) => t.id === focused.tab) ?? null)
+    : (spaceTabs.find((t) => t.active) ?? null);
+  const pane = focused
+    ? (focused.pane ? (panes.find((p) => p.pane === focused.pane) ?? null) : null)
+    : (tab ? (panes.find((p) => p.tab === tab.id && p.focused) ?? panes.find((p) => p.tab === tab.id) ?? null) : null);
+  const addr = focused?.terminal ?? pane?.terminal ?? null;
   const terminal = addr ? (terminals.find((t) => t.address === addr) ?? null) : null;
   let agent = null;
   if (addr) {
     agent = agents.find((a) => a.address === addr) ?? null;
   } else if (pane) {
     agent = agents.find((a) => a.pane === pane.pane) ?? null;
-  } else {
-    agent = agents.find((a) => a.focused) ?? null;
+  } else if (!focused) {
+    agent = agents.find((a) => (tab ? a.tab === tab.id && a.focused : space ? a.space === space.id && a.focused : a.focused)) ?? null;
   }
 
   return { space, tab, pane, agent, terminal, focused };

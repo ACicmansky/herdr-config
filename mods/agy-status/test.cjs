@@ -120,8 +120,40 @@ async function main() {
   });
   assert.equal(ordinaryRes.isWorker, false);
 
-  for (const nonWorkerTitle of [".\\fm-project", "..\\fm-project", "\\fm-project", "/fm-project", "[fm-config]", "(fm/docs)"]) {
+  for (const nonWorkerTitle of [
+    ".\\fm-project",
+    "..\\fm-project",
+    "\\fm-project",
+    "/fm-project",
+    "[fm-config]",
+    "(fm/docs)",
+    "\"fm-config\"",
+    "'fm/docs'",
+    "✦ \"fm-config\"",
+    "✦ 'fm/docs'",
+    "`fm-config`",
+    "~fm-user",
+    "✦ ❤️ fm-deploy",
+    "❤️ fm-deploy",
+    "✦ #\uFE0F\u20E3 fm-notes",
+    "✦ #\u20E3 fm-notes",
+    "✦ *\uFE0F\u20E3 fm-notes",
+    "✋fm-no-space",
+  ]) {
     assert.equal(worker.isWorkerTitleOrName(nonWorkerTitle), false, `Expected ${nonWorkerTitle} not to match worker title`);
+  }
+  for (const workerTitle of [
+    "fm-task",
+    "fm/docs",
+    "✦ fm-fix-tests",
+    "[ ! ] fm-fix-tests",
+    "[ . ] fm/docs",
+    "✋ fm-fix-tests",
+    "✋\uFE0F fm-fix-tests",
+    "⏳ fm-fix-tests",
+    "⠋ - fm-fix-tests",
+  ]) {
+    assert.equal(worker.isWorkerTitleOrName(workerTitle), true, `Expected ${workerTitle} to match worker title`);
   }
   assert.equal(worker.isWorkerBranch("fm-radio"), false);
   assert.equal(worker.isWorkerApp("firstmate_custom"), false);
@@ -229,10 +261,61 @@ async function main() {
     spaces: [primarySpace],
     panes: [{ pane: "p-mod", terminal: null, mod: "files", tab: primaryPane.tab, title: "Files", focused: true }],
     agents: [{ address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, app: "firstmate-agy", focused: true }],
-    terminals: [],
-    focused: { space: primarySpace.id, tab: primaryPane.tab, pane: "p-mod", terminal: null, shown: null, agent: null, cwd: null },
+    terminals: [{ address: "wsl/t4g", cwd: workerPane.cwd, labels: { "herdr.tab": "firstmate-b123951d-fm-other" } }],
+    focused: { space: primarySpace.id, tab: primaryPane.tab, pane: "p-mod", terminal: null, shown: null, agent: "wsl/t4g", cwd: null },
   });
+  assert.equal(modPaneWithFocusedAgentElsewhere.agent, null);
+  assert.equal(modPaneWithFocusedAgentElsewhere.terminal, null);
   assert.equal(worker.detectWorkerContext(modPaneWithFocusedAgentElsewhere).isWorker, false);
+
+  const missingFocusedPane = worker.resolveActiveContext({
+    spaces: [primarySpace],
+    panes: [],
+    agents: [{ address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, app: "firstmate-agy", focused: true }],
+    terminals: [],
+    focused: { space: primarySpace.id, tab: primaryPane.tab, pane: "p-missing", terminal: null, shown: null, agent: null, cwd: null },
+  });
+  assert.equal(missingFocusedPane.agent, null);
+  assert.equal(worker.detectWorkerContext(missingFocusedPane).isWorker, false);
+
+  const emptyTabWithFocusedAgentElsewhere = worker.resolveActiveContext({
+    spaces: [primarySpace],
+    panes: [],
+    agents: [{ address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, app: "firstmate-agy", focused: true }],
+    terminals: [],
+    focused: { space: primarySpace.id, tab: primaryPane.tab, pane: null, terminal: null, shown: null, agent: null, cwd: null },
+  });
+  assert.equal(emptyTabWithFocusedAgentElsewhere.agent, null);
+  assert.equal(worker.detectWorkerContext(emptyTabWithFocusedAgentElsewhere).isWorker, false);
+
+  const unfocusedTabWithWorkerPane = worker.resolveActiveContext({
+    spaces: [primarySpace],
+    panes: [{ ...workerPane, tab: primaryPane.tab, focused: false }],
+    agents: [{ address: "wsl/t4g", pane: workerPane.pane, space: primarySpace.id, tab: primaryPane.tab, app: "firstmate-agy", focused: false }],
+    terminals: [],
+    focused: { space: primarySpace.id, tab: primaryPane.tab, pane: null, terminal: null, shown: null, agent: null, cwd: null },
+  });
+  assert.equal(unfocusedTabWithWorkerPane.pane, null);
+  assert.equal(worker.detectWorkerContext(unfocusedTabWithWorkerPane).isWorker, false);
+
+  const nullFocusedScopedToActiveTab = worker.resolveActiveContext({
+    spaces: [primarySpace],
+    panes: [],
+    agents: [{ address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, app: "firstmate-agy", focused: true }],
+    terminals: [],
+    focused: null,
+  });
+  assert.equal(nullFocusedScopedToActiveTab.agent, null);
+  assert.equal(worker.detectWorkerContext(nullFocusedScopedToActiveTab).isWorker, false);
+
+  const nullFocusedMatchesSameTabAgent = worker.resolveActiveContext({
+    spaces: [primarySpace],
+    panes: [],
+    agents: [primaryAgent],
+    terminals: [],
+    focused: null,
+  });
+  assert.equal(nullFocusedMatchesSameTabAgent.agent, primaryAgent);
 
   // 7. Integration test of AgyStatus render() via vm (matching sound-library/test.cjs style).
   let mockSpaces = [primarySpace, workerSpace];
