@@ -159,7 +159,7 @@ export default class AgyStatus extends View {
       : "Firstmate worker pane — do not type chat replies here; reply in Firstmate";
 
     const needs = list.filter((a) => a.status === "blocked").length;
-    const label = (icon, text) => h_flex().gap(6).items_center().child(svg(`mods/workspace-chrome/${icon}.svg`).size(13)).child(text);
+    const label = (icon, text) => h_flex().gap(6).items_center().flex_none().child(svg(`mods/workspace-chrome/${icon}.svg`).size(13).flex_none()).child(text);
 
     const data = shared("agy.usage");
     const buckets = (data?.groups ?? []).flatMap((g) => g.buckets ?? []);
@@ -172,11 +172,17 @@ export default class AgyStatus extends View {
       bArgon && { label: "Argon", b: bArgon },
     ].filter(Boolean);
 
-    return h_flex().size_full().px(14).gap(16).items_center().bg(t.chrome).border_t(1).border_color(t.border).text_size(11.8).text_color(t.muted)
+    return h_flex().size_full().min_w(0).px(12).gap(12).items_center().bg(t.chrome).border_t(1).border_color(t.border).text_size(11.8).text_color(t.muted)
       .child(label(space?.machine ? "server" : "monitor", space?.machine ?? "This computer"))
-      .when(Boolean(space?.branch), (el) => el.child(label("branch", space.branch)))
+      .when(Boolean(space?.branch), (el) =>
+        el.child(
+          h_flex().id("status-branch").gap(6).items_center().min_w(0).max_w(180).tooltip(space.branch)
+            .child(svg("mods/workspace-chrome/branch.svg").size(13).flex_none())
+            .child(div().min_w(0).truncate().child(space.branch))
+        )
+      )
       .child(
-        h_flex().gap(6).items_center().child(div().size(6).rounded(3).bg(t.dim)).child(`${list.length} agents`)
+        h_flex().gap(6).items_center().flex_none().child(div().size(6).rounded(3).bg(t.dim)).child(`${list.length} agents`)
           .when(needs > 0, (el) => el.child(div().text_color(t.blocked).child(`· ${needs} needs you`)))
       )
       .when(workerState.isWorker, (el) =>
@@ -188,9 +194,9 @@ export default class AgyStatus extends View {
             .child(div().font_semibold().text_size(11).text_color(warnColor).child("WORKER · reply in Firstmate"))
         )
       )
-      .child(div().flex_1())
+      .child(div().flex_1().min_w(0))
       .child(
-        h_flex().id("agy-limits").gap(8).px(8).h(22).rounded(5).items_center().cursor_pointer()
+        h_flex().id("agy-limits").gap(8).px(8).h(22).rounded(5).items_center().flex_none().cursor_pointer()
           .hover((s) => s.bg(t.hover))
           .tooltip("Click for Antigravity limits & reset times")
           .on_click(() => openOverlay({ mod: "agy-status", kind: "popup", width: 340, height: 310, props: { popup: true } }))
@@ -208,6 +214,6 @@ export default class AgyStatus extends View {
             })
           )
       )
-      .child(div().id("palette").text_color(t.dim).cursor_pointer().on_click(() => run("app.palette")).child(this.hint()));
+      .child(div().id("palette").flex_none().text_color(t.dim).cursor_pointer().on_click(() => run("app.palette")).child(this.hint()));
   }
 }

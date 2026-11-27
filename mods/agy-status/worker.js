@@ -152,7 +152,7 @@ export function resolveActiveContext({ spaces = [], panes = [], agents = [], ter
     const addr = focused?.shown || focused?.terminal || focused?.agent || null;
     const terminal = addr ? (terminals.find((t) => t.address === addr) ?? null) : null;
     const agent = addr ? (agents.find((a) => a.address === addr) ?? null) : null;
-    return { space: null, tab: null, pane: null, agent, terminal, focused };
+    return { space: null, tab: null, pane: null, agent, terminal, focused: isShownReplacement ? null : focused };
   }
 
   const space = focused?.space

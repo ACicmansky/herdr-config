@@ -253,9 +253,20 @@ async function main() {
     panes: [workerPane],
     agents: [{ address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, app: "firstmate-agy", focused: true }],
     terminals: [{ address: "wsl/t-shown", cwd: "/tmp", labels: {} }],
-    focused: { space: workerSpace.id, tab: workerPane.tab, pane: workerPane.pane, terminal: "wsl/t4g", shown: "wsl/t-shown", agent: null, cwd: "/tmp" },
+    focused: { space: workerSpace.id, tab: workerPane.tab, pane: workerPane.pane, terminal: "wsl/t4g", shown: "wsl/t-shown", agent: null, cwd: workerPane.cwd },
   });
+  assert.equal(shownPlainOnWorkerPane.focused, null);
   assert.equal(worker.detectWorkerContext(shownPlainOnWorkerPane).isWorker, false);
+
+  const shownWorkerOnPlainPane = worker.resolveActiveContext({
+    spaces: [primarySpace],
+    panes: [primaryPane],
+    agents: [primaryAgent, { address: "wsl/t4g", pane: workerPane.pane, space: workerSpace.id, tab: workerPane.tab, app: "firstmate-agy", focused: false }],
+    terminals: [{ address: "wsl/t4g", cwd: workerPane.cwd, labels: { "herdr.tab": "firstmate-b123951d-fm-shown" } }],
+    focused: { space: primarySpace.id, tab: primaryPane.tab, pane: primaryPane.pane, terminal: "wsl/t4", shown: "wsl/t4g", agent: null, cwd: primaryPane.cwd },
+  });
+  assert.equal(worker.detectWorkerContext(shownWorkerOnPlainPane).isWorker, true);
+  assert.equal(worker.detectWorkerContext(shownWorkerOnPlainPane).taskName, "shown");
 
   const modPaneWithFocusedAgentElsewhere = worker.resolveActiveContext({
     spaces: [primarySpace],
@@ -397,7 +408,13 @@ async function main() {
   const badgeNodes = collectNodes(badge);
   assert.ok(badgeNodes.some((n) => (n.text ?? []).includes("WORKER · reply in Firstmate")));
   assert.match(badge.props.tooltip, /herdr-worker-badge-and-docs/);
-  assert.ok(workerTree.some((n) => n.elementId === "agy-limits"));
+  const branchEl = workerTree.find((n) => n.elementId === "status-branch");
+  assert.ok(branchEl && branchEl.props.max_w === 180 && branchEl.props.min_w === 0);
+  assert.equal(branchEl.props.tooltip, workerSpace.branch);
+  const limitsEl = workerTree.find((n) => n.elementId === "agy-limits");
+  const paletteEl = workerTree.find((n) => n.elementId === "palette");
+  assert.ok(limitsEl && "flex_none" in limitsEl.props);
+  assert.ok(paletteEl && "flex_none" in paletteEl.props);
 
   console.log("agy-status worker indicator checks passed.");
 }
