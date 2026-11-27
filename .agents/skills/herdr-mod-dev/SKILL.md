@@ -52,7 +52,7 @@ Run before finishing any mod/layout/config change:
 2. Run Node unit tests:
    ```sh
    node mods/agy-status/test.cjs
-   node mods/sound-library/test.cjs
+   node mods/sound-library/test.cjs  # PowerShell checks require Windows node + powershell.exe
    ```
 3. Validate the mod with Herdr (UNC paths work from WSL):
    ```sh

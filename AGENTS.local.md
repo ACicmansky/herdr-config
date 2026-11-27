@@ -23,7 +23,7 @@ Windows/WSL configuration, custom layouts, themes, GPUI mods, sounds, and launch
 
 ## Local Validation Before Syncing to `C:\Users\Andrej\.config\herdr-app`
 1. Syntax-check modified JS: `node --check mods/<name>/main.js` (and helper modules).
-2. Run mod unit tests: `node mods/agy-status/test.cjs` and `node mods/sound-library/test.cjs` (note: PowerShell sections in `sound-library/test.cjs` require Windows `powershell.exe`).
+2. Run mod unit tests: `node mods/agy-status/test.cjs` and `node mods/sound-library/test.cjs` (note: PowerShell sections in `sound-library/test.cjs` require Windows `node` and `powershell.exe`).
 3. Validate mods in Herdr (from WSL, single-quoted UNC paths work):
    `/mnt/c/Users/Andrej/AppData/Local/Programs/herdr-app/herdr-app.exe check '\\wsl.localhost\Ubuntu\<worktree>\mods\<name>'`
 4. After syncing to `C:\Users\Andrej\.config\herdr-app`, verify no `*.error` files (`layout.error`, `keys.error`, `settings.error`, `programs.error`) appear and `herdr-app status` reports no mod errors.
